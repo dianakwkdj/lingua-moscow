@@ -499,9 +499,6 @@
       if (kind === "course" && !context.course) return;
       if (kind === "tutor" && !context.tutor) return;
 
-      // update time dropdown ONLY when the date changes.
-      // If we rebuild the <select> on every change (including time change),
-      // the chosen time gets reset and it looks like "time cannot be selected".
       if (!e || e.target === m.date) {
         setupTimeControl(context);
       }
