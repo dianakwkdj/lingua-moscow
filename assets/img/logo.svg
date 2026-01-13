@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="LinguaMoscow">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff2ea7"/>
+      <stop offset="1" stop-color="#a24dff"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="28" fill="url(#g)"/>
+  <path d="M40 44c0-6 5-10 11-10h26c6 0 11 4 11 10v40c0 6-5 10-11 10H51c-6 0-11-4-11-10V44z" fill="rgba(255,255,255,0.92)"/>
+  <path d="M48 50h32v6H48v-6zm0 12h32v6H48v-6zm0 12h26v6H48v-6z" fill="rgba(255,46,167,0.78)"/>
+  <circle cx="88" cy="86" r="16" fill="rgba(255,255,255,0.9)"/>
+  <path d="M83 86l4 4 10-12" fill="none" stroke="#ff2ea7" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
