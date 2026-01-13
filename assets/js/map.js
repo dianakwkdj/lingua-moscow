@@ -13,7 +13,7 @@
     { id: "cafe", label: "Языковые кафе / клубы" },
   ];
 
-  // Curated list (Москва) — закрепленные отметки (доп. задание)
+
   const RESOURCES = [
     {
       id: "ifl-rsl",

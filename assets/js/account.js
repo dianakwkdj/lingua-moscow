@@ -14,7 +14,38 @@
     courses: [],
     tutors: [],
     deleteId: null,
+    edit: {
+      order: null,
+      ctx: null,
+      computed: null,
+      bound: false,
+    },
   };
+
+  const editEls = () => ({
+    modal: $("#editModal"),
+    orderId: $("#editOrderId"),
+    courseId: $("#editCourseId"),
+    tutorId: $("#editTutorId"),
+    title: $("#editTitle"),
+    hint: $("#editHint"),
+    date: $("#editDate"),
+    time: $("#editTime"),
+    duration: $("#editDuration"),
+    durationHelp: $("#editDurationHelp"),
+    persons: $("#editPersons"),
+    eEarly: $("#eEarly"),
+    eGroup: $("#eGroup"),
+    eIntensive: $("#eIntensive"),
+    supplementary: $("#eSupplementary"),
+    personalized: $("#ePersonalized"),
+    excursions: $("#eExcursions"),
+    assessment: $("#eAssessment"),
+    interactive: $("#eInteractive"),
+    price: $("#editPrice"),
+    breakdown: $("#editBreakdown"),
+    save: $("#saveEdit"),
+  });
 
   const loadCache = () => {
     try { state.courses = JSON.parse(localStorage.getItem("LM_CACHE_COURSES") || "[]") || []; } catch (_) {}
@@ -226,60 +257,68 @@
     }
   };
 
-  const fillEditForm = (o, ctx) => {
-    $("#editOrderId").value = o.id;
-    $("#editCourseId").value = o.course_id || "";
-    $("#editTutorId").value = o.tutor_id || "";
+  // NOTE: populate once, do not overwrite user edits on every recalculation.
+  const populateEditForm = (o, ctx) => {
+    const e = editEls();
+    e.orderId.value = o.id;
+    e.courseId.value = o.course_id || "";
+    e.tutorId.value = o.tutor_id || "";
 
-    $("#editTitle").value = orderLabel(o);
-    $("#editHint").textContent = `#${o.id} • ${o.course_id ? "курс" : "репетитор"}`;
+    e.title.value = orderLabel(o);
+    e.hint.textContent = `#${o.id} • ${o.course_id ? "курс" : "репетитор"}`;
 
-    $("#editDate").value = o.date_start || "";
-    $("#editTime").value = (o.time_start || "").slice(0,5);
+    e.date.value = o.date_start || "";
+    e.time.value = (o.time_start || "").slice(0, 5);
 
-    // duration: course computed, tutor editable
     if (ctx.kind === "course" && ctx.course) {
       const dur = Number(ctx.course.total_length || 0) * Number(ctx.course.week_length || 0);
-      $("#editDuration").value = String(dur);
-      $("#editDuration").disabled = true;
-      $("#editDurationHelp").textContent = `Курс: длительность фиксирована (${dur} ч).`;
+      e.duration.value = String(dur);
+      e.duration.disabled = true;
+      e.durationHelp.textContent = `Курс: длительность фиксирована (${dur} ч).`;
     } else {
-      $("#editDuration").value = String(o.duration || 1);
-      $("#editDuration").disabled = false;
-      $("#editDurationHelp").textContent = "Репетитор: 1–40 ч.";
+      e.duration.value = String(o.duration || 1);
+      e.duration.disabled = false;
+      e.durationHelp.textContent = "Репетитор: 1–40 ч.";
     }
 
-    $("#editPersons").value = String(o.persons || 1);
+    e.persons.value = String(o.persons || 1);
 
-    // user options
-    $("#eSupplementary").checked = !!o.supplementary;
-    $("#ePersonalized").checked = !!o.personalized;
-    $("#eExcursions").checked = !!o.excursions;
-    $("#eAssessment").checked = !!o.assessment;
-    $("#eInteractive").checked = !!o.interactive;
+    // user-controlled options
+    e.supplementary.checked = !!o.supplementary;
+    e.personalized.checked = !!o.personalized;
+    e.excursions.checked = !!o.excursions;
+    e.assessment.checked = !!o.assessment;
+    e.interactive.checked = !!o.interactive;
+  };
 
-    // auto options (disabled)
+  const recalcEdit = () => {
+    const o = state.edit.order;
+    const ctx = state.edit.ctx;
+    if (!o || !ctx) return;
+    const e = editEls();
+
     const computed = computePriceForOrder(ctx, {
       ...o,
-      date_start: $("#editDate").value,
-      time_start: $("#editTime").value,
-      duration: $("#editDuration").value,
-      persons: $("#editPersons").value,
-      supplementary: $("#eSupplementary").checked,
-      personalized: $("#ePersonalized").checked,
-      excursions: $("#eExcursions").checked,
-      assessment: $("#eAssessment").checked,
-      interactive: $("#eInteractive").checked,
+      date_start: e.date.value,
+      time_start: e.time.value,
+      duration: e.duration.value,
+      persons: e.persons.value,
+      supplementary: e.supplementary.checked,
+      personalized: e.personalized.checked,
+      excursions: e.excursions.checked,
+      assessment: e.assessment.checked,
+      interactive: e.interactive.checked,
     });
 
-    $("#eEarly").checked = computed.opts.early_registration;
-    $("#eGroup").checked = computed.opts.group_enrollment;
-    $("#eIntensive").checked = computed.opts.intensive_course;
+    // auto options display
+    e.eEarly.checked = computed.opts.early_registration;
+    e.eGroup.checked = computed.opts.group_enrollment;
+    e.eIntensive.checked = computed.opts.intensive_course;
 
-    $("#editPrice").textContent = formatMoneyRU(computed.total);
-    $("#editBreakdown").textContent = computed.breakdown;
+    e.price.textContent = formatMoneyRU(computed.total);
+    e.breakdown.textContent = computed.breakdown;
 
-    return computed;
+    state.edit.computed = computed;
   };
 
   const openEdit = async (id) => {
@@ -298,51 +337,52 @@
       ctx = getOrderContext(o);
     }
 
-    let computed = fillEditForm(o, ctx);
+    state.edit.order = o;
+    state.edit.ctx = ctx;
+    populateEditForm(o, ctx);
+    recalcEdit();
 
-    // live recalculation
-    const recalc = debounce(() => {
-      computed = fillEditForm(o, ctx);
-    }, 120);
-
-    ["input", "change"].forEach(evt => {
-      $("#editDate").addEventListener(evt, recalc);
-      $("#editTime").addEventListener(evt, recalc);
-      $("#editDuration").addEventListener(evt, recalc);
-      $("#editPersons").addEventListener(evt, recalc);
-      $("#eSupplementary").addEventListener(evt, recalc);
-      $("#ePersonalized").addEventListener(evt, recalc);
-      $("#eExcursions").addEventListener(evt, recalc);
-      $("#eAssessment").addEventListener(evt, recalc);
-      $("#eInteractive").addEventListener(evt, recalc);
-    });
+    // bind once
+    if (!state.edit.bound) {
+      state.edit.bound = true;
+      const recalc = debounce(recalcEdit, 120);
+      const e = editEls();
+      [e.date, e.time, e.duration, e.persons, e.supplementary, e.personalized, e.excursions, e.assessment, e.interactive]
+        .forEach(el => {
+          if (!el) return;
+          el.addEventListener("input", recalc);
+          el.addEventListener("change", recalc);
+        });
+    }
 
     bootstrap.Modal.getOrCreateInstance($("#editModal")).show();
 
-    $("#saveEdit").onclick = async () => {
+    editEls().save.onclick = async () => {
       try {
+        const computed = state.edit.computed || { total: Number(o.price || 0), opts: {} };
+        const e = editEls();
         const payload = {
           tutor_id: o.tutor_id ?? null,
           course_id: o.course_id ?? null,
-          date_start: $("#editDate").value,
-          time_start: $("#editTime").value,
-          duration: Number($("#editDuration").value),
-          persons: Number($("#editPersons").value),
+          date_start: e.date.value,
+          time_start: e.time.value,
+          duration: Number(e.duration.value),
+          persons: Number(e.persons.value),
           price: Number(computed.total),
 
           // IMPORTANT: always send booleans to avoid reset to false
           early_registration: !!computed.opts.early_registration,
           group_enrollment: !!computed.opts.group_enrollment,
           intensive_course: !!computed.opts.intensive_course,
-          supplementary: !!$("#eSupplementary").checked,
-          personalized: !!$("#ePersonalized").checked,
-          excursions: !!$("#eExcursions").checked,
-          assessment: !!$("#eAssessment").checked,
-          interactive: !!$("#eInteractive").checked,
+          supplementary: !!e.supplementary.checked,
+          personalized: !!e.personalized.checked,
+          excursions: !!e.excursions.checked,
+          assessment: !!e.assessment.checked,
+          interactive: !!e.interactive.checked,
         };
 
-        $("#saveEdit").disabled = true;
-        $("#saveEdit").textContent = "Сохраняем…";
+        e.save.disabled = true;
+        e.save.textContent = "Сохраняем…";
         await API.put(`/api/orders/${id}`, payload);
 
         showAlert("Заявка обновлена.", "success", 3500);
@@ -351,8 +391,9 @@
       } catch (e) {
         showAlert(`Не удалось обновить: ${e.message || e}`, "danger", 8000);
       } finally {
-        $("#saveEdit").disabled = false;
-        $("#saveEdit").textContent = "Сохранить";
+        const e = editEls();
+        e.save.disabled = false;
+        e.save.textContent = "Сохранить";
       }
     };
   };
